@@ -1,0 +1,9 @@
+/////////////Setting UP K8s ///////////
+
+
+Options locally: Docker Desktop, Minikube, Kubeadm 
+Cloud: Azure AKS, Google Cloud Platform (GKE) , Aws EKS.
+Playground: https://kodekloud.com/k8s
+
+Minikube(minikube.exe) can be downloaded as an image and run on VirtualBox as a single node cluster + you need kubectl tool installed
+
