@@ -1,0 +1,136 @@
+
+
+Api Server - acts as frontend for k8s: users, command line devices  - all wnat we need to interact with the server
+
+etcd - is Key-Value store
+
+Kubelet - is agent which is running in each node in the cluster ,validates the containers running in the nodes as expected 
+
+Container Runtime - software which is used to run containes (containerd we are using as an engine but as well exist rkt or CRI-O)
+
+
+Controller - is the brain, makes decisions when container is failing to bring new one
+
+
+From Coplilot:
+
+
+Component	Purpose	Where it runs
+kube-apiserver	Central management interface; exposes the Kubernetes API for all operations.	Master node
+etcd	Key-value store for cluster data (state, configs, secrets).	Master node
+kube-scheduler	Assigns pods to nodes based on resource availability and constraints.	Master node
+kube-controller-manager	Runs controllers that handle replication, endpoints, and node management.	Master node
+cloud-controller-manager	Integrates with cloud provider APIs for load balancers, volumes, etc.	Master node (if using cloud provider)
+
+or:
+
+Control Plane (Master)
+The brains of the cluster — it decides what should run, where, and how.
+
+API Server — the front door for all cluster operations
+
+etcd — stores cluster state
+
+Scheduler — picks which node runs each pod
+
+Controller Manager — ensures desired state (replicas, nodes, endpoints)
+
+Cloud Controller Manager — integrates with cloud providers
+
+Node Components (run on worker nodes)
+
+
+Component	Purpose	Where it runs
+kubelet	Ensures containers are running as specified in pod manifests.	Worker node
+kube-proxy	Manages network routing and load balancing for services.	Worker node
+container runtime	Runs containers (e.g., containerd, CRI-O, Docker).	Worker node
+
+
+How They Work Together
+You submit a request (kubectl → API server).
+
+API server validates and stores it in etcd.
+
+Scheduler assigns the pod to a worker node.
+
+kubelet on that node pulls images and starts containers.
+
+kube-proxy configures networking so the pod can communicate.
+
+>kubectl run hello-minikube  - deploy application on the cluster
+
+>kubectl cluster-info  - get information about a cluster
+
+>kubectl get nodes - to list all nodes as part of the cluster
+
+
+Scheduler - looks for changes and assigneds containers to the nodes
+
+
+
+Two types of servers: Master and Worker Nodes
+
+Master hase: kube-apiserver, etcd, controller, scheduler and etc
+
+//////////////////////////////comntainerd /////////////
+
+containerd is the core container runtime that sits beneath Docker and Kubernetes — it’s the engine that actually manages containers on your system.
+Think of it as the “container manager” that handles pulling images, starting containers, and managing their lifecycle, while higher‑level tools like Docker or Kubernetes talk to it through APIs.
+
+What containerd Does
+containerd provides:
+
+Image management — pulling, pushing, and storing container images
+
+Container execution — creating and running containers
+
+Storage and snapshots — managing container filesystems
+
+Networking hooks — integrating with CNI plugins
+
+Runtime interface — connecting to low‑level runtimes like runc
+
+Relationship to Docker and Kubernetes
+Layer	Tool	Role
+High‑level	Docker	User‑friendly CLI and API
+Mid‑level	containerd	Manages containers and images
+Low‑level	runc	Executes containers using Linux namespaces and cgroups
+
+
+
+What ctr Is
+ctr is a low‑level CLI tool for containerd, used to manage container images and run containers directly — without Docker’s higher‑level tooling. It’s mostly for debugging or advanced operations.
+
+Run a container
+
+ctr run docker.io/library/redis:alpine redis
+
+
+Key Difference from Docker
+Feature	Docker CLI	ctr (containerd CLI)
+Abstraction level	High (user‑friendly)	Low (developer/debug)
+Networking	Automatic	Manual setup
+Image management	Integrated	Manual
+Use case	Everyday container ops	Debugging, testing runtimes
+
+
+Excellent — the commands in your image are all part of crictl, the Container Runtime Interface (CRI) command‑line tool used to interact directly with Kubernetes’ container runtime (like containerd or CRI‑O).
+You use these when you want to debug or manage containers on a node without going through kubectl
+
+
+
+Command	Purpose	When to Use It
+crictl	Opens the CLI or verifies installation.	To check that crictl is available and configured correctly.
+crictl pull busybox	Pulls the BusyBox image from a registry.	When you need to download an image manually (for testing or debugging).
+crictl images	Lists all images stored by the runtime.	To verify which images are available on the node.
+crictl ps -a	Shows all containers (running and stopped).	To inspect container states and IDs for troubleshooting.
+crictl exec -i -t <container_id> ls	Executes a command (ls) inside a container interactively.	To debug or inspect files inside a running container.
+
+
+
+Tool	Scope	Typical Use
+kubectl	Cluster‑level	Manage pods and deployments
+crictl	Node‑level	Manage containers directly
+ctr	Runtime‑level	Low‑level containerd operations
+
+
