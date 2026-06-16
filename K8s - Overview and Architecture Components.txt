@@ -143,4 +143,48 @@ nerdctl	A Docker-compatible CLI built on containerd. It supports familiar comman
 crictl	A CLI for CRI (Container Runtime Interface) used by Kubernetes. It’s primarily for cluster administrators to inspect and manage pods and containers.	Kubernetes runtime debugging and inspection.
 
 
+/////////////////////////Lab Familiarize with Lab Env ///////////////
 
+How many nodes are part of the cluster?
+
+
+controlplane ~ ✖ kubectl get nodes
+NAME           STATUS   ROLES           AGE   VERSION
+controlplane   Ready    control-plane   19m   v1.35.0+k3s3
+
+If you’re using containerd or CRI tools for debugging, you might also inspect nodes via:
+
+crictl — for Kubernetes runtime inspection.
+
+ctr — for containerd-level operations.
+
+nerdctl — for Docker-compatible containerd environments.
+
+What is the version of Kubernetes running on the nodes ?
+
+>kubectl --help   - to seee the options
+and
+> kubectl options
+
+controlplane ~ ✖ kubectl version
+Client Version: v1.35.0+k3s3
+Kustomize Version: v5.7.1
+Server Version: v1.35.0+k3s3     -  this is the answer 
+
+I just play with commands:
+controlplane ~ ✖ kubectl cluster-info
+Kubernetes control plane is running at https://127.0.0.1:6443
+CoreDNS is running at https://127.0.0.1:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+Metrics-server is running at https://127.0.0.1:6443/api/v1/namespaces/kube-system/services/https:metrics-server:https/proxy
+
+
+
+What is the flavor and version of Operating System on which the Kubernetes nodes are running?
+
+Command to check OS details of all nodes:
+
+>kubectl get node -o wide 
+
+controlplane ~ ➜  kubectl get node -o wide
+NAME           STATUS   ROLES           AGE   VERSION        INTERNAL-IP      EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION   CONTAINER-RUNTIME
+controlplane   Ready    control-plane   29m   v1.35.0+k3s3   192.168.30.237   <none>        Alpine Linux v3.16   6.8.0-1047-gcp   containerd://1.6.8
