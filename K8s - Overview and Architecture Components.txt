@@ -134,3 +134,13 @@ crictl	Node‑level	Manage containers directly
 ctr	Runtime‑level	Low‑level containerd operations
 
 
+
+These three buttons represent different container runtime command-line tools — each with its own focus and ecosystem:
+
+Tool	Description	Typical Use Case
+ctr	The native CLI for containerd, a core container runtime used by Kubernetes and Docker. It’s minimal and designed for direct interaction with containerd’s API.	Low-level container management and debugging.
+nerdctl	A Docker-compatible CLI built on containerd. It supports familiar commands like nerdctl run, build, and compose, making it easier for Docker users to transition.	Developer-friendly container workflows with containerd.
+crictl	A CLI for CRI (Container Runtime Interface) used by Kubernetes. It’s primarily for cluster administrators to inspect and manage pods and containers.	Kubernetes runtime debugging and inspection.
+
+
+
