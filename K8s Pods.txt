@@ -1,0 +1,419 @@
+
+
+We assume application already build and exist images for it in the docker hub or some registry
+
+And k8s cluster already set
+
+Deploy pod:
+>kubectl run --image=nginx  - this will create a POD on a NODE and the deploy the instence of NGINX image 
+
+>kubectl get pod  - see the list of the pods in the cluster
+
+//////////////////////////Demo //////////////////
+
+
+>kubectl run nging --image=nginx    - can be used in params different registry not default
+
+>kubectl get pods  -  get running pods
+
+>kubectl describe pod nginx   - we will get more information about a pod nginx in this case
+
+>kubectl get pods -o wide  - this can provide additional information about an NODE and OS and ip
+
+
+ note about creating pods using kubectl run.
+
+To create a pod from the command line, use the command:
+
+Create an NGINX Pod
+
+kubectl run nginx --image=nginx
+
+As of version 1.18, kubectl run (without any arguments such as --generator ) will create a pod instead of a deployment.
+
+To create a deployment using imperative command, use kubectl create:
+
+kubectl create deployment nginx --image=nginx
+
+Kubernetes Concepts – https://kubernetes.io/docs/concepts/
+
+Pod Overview- https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/
+
+
+///////////////////////POD with YAML /////////////////
+
+apiVersion: v1  - for Pod use v1 , for Service v1 , for ReplicaSet apps/v1 , Deployment apps/v1
+kind:           - options are Pod,Service, ReplicaSet,Deployment
+metadata:
+spec:
+
+
+
+
+
+Example of: pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nging
+  labels:
+    app: nginx
+    tier: frontend
+
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+  - name: busybox
+    image: busybox:latest
+
+
+kubectl apply -f pod.yaml  - when you create a new object (or use "create")
+
+kubectl get pods - see all deployed pods
+
+
+or 
+
+kubectl describe pod nginx  - to get more info about a specific pod
+
+////////////////////////////////Lab Pods with Yaml /////////////
+
+How many pods exist on the system?
+
+controlplane ~ ➜  kubectl get pods
+No resources found in default namespace.
+
+
+Create a new pod using the nginx image.
+
+controlplane ~ ✖ kubectl run nginx --image=nginx
+pod/nginx created
+
+controlplane ~ ➜  kubectl get pods
+NAME            READY   STATUS    RESTARTS   AGE
+newpods-lcdlz   1/1     Running   0          2m
+newpods-lqh9n   1/1     Running   0          2m
+newpods-m66w2   1/1     Running   0          2m
+nginx           1/1     Running   0          9s
+
+How many pods are created now?
+
+Note: We have created a few more pods. So please check again in the current(default) namespace.
+
+>kubectl get pods
+
+controlplane ~ ➜  kubectl get pods
+NAME            READY   STATUS    RESTARTS   AGE
+newpods-lcdlz   1/1     Running   0          2m55s
+newpods-lqh9n   1/1     Running   0          2m55s
+newpods-m66w2   1/1     Running   0          2m55s
+nginx           1/1     Running   0          64s
+
+
+Which image is specified for the pods whose names begin with the newpods- prefix?
+
+You must look at one of the new pods in detail to figure this out.
+
+
+controlplane ~ ✖ kubectl describe pod newpods-lcdlz
+Name:             newpods-lcdlz
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             controlplane/192.168.159.194
+Start Time:       Wed, 17 Jun 2026 11:12:11 +0000
+Labels:           tier=busybox
+Annotations:      <none>
+Status:           Running
+IP:               10.22.0.11
+IPs:
+  IP:           10.22.0.11
+Controlled By:  ReplicaSet/newpods
+Containers:
+  busybox:
+    Container ID:  containerd://d6f298677a3d28161694e5dc9ed081fd598470ee9fc8810f59a5ee86c19c69e6
+    Image:         busybox
+
+
+So answer is:   Image  busybox
+
+
+Which nodes are these pods placed on?
+
+You must look at all the pods in detail to figure this out.
+
+
+controlplane ~ ✖ kubectl describe pod newpods-lcdlz
+
+Node:             controlplane/192.168.159.194
+
+controlplane ~ ➜  kubectl describe pod newpods-lqh9n
+
+Node:             controlplane/192.168.159.194
+
+I have checked two so I think it is : CONTROLPLANE node for all of them - which is correct
+
+
+We just created a new pod named webapp. How many containers are part of the webapp pod?
+
+Note: Ignore the state of the pod for now.
+
+>kubectl get pods  - will show as 1/2 for this pod ,so answer is 2
+webapp          1/2
+
+
+
+What images are used in the new webapp pod?
+
+You must look at all the pod's containers in detail to figure this out.
+
+Run: kubectl describe pod webapp   - and find there Containers part and see
+ Image:          nginx  and  agentx
+
+What is the state of the container agentx in the pod webapp?
+
+Wait for it to finish the ContainerCreating state
+
+controlplane ~ ✖ kubectl describe pod webapp
+
+  agentx:
+    Container ID:   
+    Image:          agentx
+    Image ID:       
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+
+
+Why do you think the container agentx in pod webapp is in error?
+
+Inspect the events of the pod to determine the reason for the container's failure to start.
+
+Containers:
+  
+agentx:
+    Container ID:   
+    Image:          agentx
+    Image ID:       
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+      Reason:       ImagePullBackOff
+    Ready:          False
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-bv99c (ro)
+
+Image cannot be pulled: Reason:       ImagePullBackOff
+
+What does the READY column in the output of the kubectl get pods command indicate?
+
+controlplane ~ ✖ kubectl get pods
+NAME            READY   STATUS             RESTARTS   AGE
+newpods-lcdlz   1/1     Running            0          13m
+newpods-lqh9n   1/1     Running            0          13m
+newpods-m66w2   1/1     Running            0          13m
+nginx           1/1     Running            0          12m
+webapp          1/2     ImagePullBackOff   0          7m28s
+
+Answer: Ready containers in pod / Total containers in pod
+
+Delete the webapp Pod.
+
+
+Once deleted, wait for the pod to fully terminate.
+
+
+controlplane ~ ✖ kubectl delete pod webapp
+pod "webapp" deleted from default namespace
+
+Create a new pod with the name redis and the image redis123.
+
+
+Utilize a pod-definition YAML file. Please note that the image name redis123 is intentionally incorrect. Do NOT correct the image at this stage; you will address this in the subsequent task.
+
+controlplane ~ ➜  kubectl get pods
+NAME            READY   STATUS             RESTARTS   AGE
+newpods-mxjl5   1/1     Running            0          46s
+newpods-tccsd   1/1     Running            0          46s
+newpods-ws62l   1/1     Running            0          46s
+webapp          1/2     ImagePullBackOff   0          34s
+
+controlplane ~ ➜  kubectl run redis --image=redis123
+pod/redis created
+
+Note , see the status of redis which i have created:
+
+controlplane ~ ➜  kubectl get pods
+NAME            READY   STATUS         RESTARTS   AGE
+newpods-mxjl5   1/1     Running        0          78s
+newpods-tccsd   1/1     Running        0          78s
+newpods-ws62l   1/1     Running        0          78s
+redis           0/1     ErrImagePull   0          6s
+webapp          1/2     ErrImagePull   0          66s
+
+
+
+
+Now change the image on this pod to redis.
+
+
+Once done, the pod should be in a running state.
+
+We see it is in error and image name is wrong:
+
+controlplane ~ ✖ kubectl describe pod redis
+Name:             redis
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             controlplane/192.168.166.107
+Start Time:       Wed, 17 Jun 2026 11:33:27 +0000
+Labels:           run=redis
+Annotations:      <none>
+Status:           Pending
+IP:               10.22.0.13
+IPs:
+  IP:  10.22.0.13
+Containers:
+  redis:
+    Container ID:   
+    Image:          redis123
+
+
+to change it (cause we run in cmd so the pod  Pod definition stored in the API server)
+
+kubectl edit pod redis   - will open a VIM and then modify a line
+
+- image redis   - click ESC and :wq to save it
+
+Now we check and see K8s recreated the POD:
+
+controlplane ~ ✖ kubectl get pods
+NAME            READY   STATUS             RESTARTS   AGE
+newpods-mxjl5   1/1     Running            0          9m18s
+newpods-tccsd   1/1     Running            0          9m18s
+newpods-ws62l   1/1     Running            0          9m18s
+redis           1/1     Running            0          8m6s
+
+
+Note:sometime need  delete the POD and k8s will recreate it, to delete: kubectl delete pod redis
+
+As well there the option to do DRY RUN:
+>kubectl run redis --image=redis123 --dry-run=clinet -o yaml   - will generate and show the yaml example
+
+>kubectl run redis --image=redis123 --dry-run=clinet -o yaml > redis.yaml  - lets writeRedirect) it to the YAML file
+
+>kubectl create -f redis.yaml  - will create the POD from the YAML. Status will be Error cause image name is wrong as expected
+
+So to fix this we can now modify a file:
+
+>vim redis.yaml  and fix the part - image: redis  
+
+Now need apply the changes:
+
+>kubectl apply -f redis.yaml
+
+/////////////////////////////////////Replication Controllers and Replica Set ////////
+
+ReplicationController and ReplicaSet are both Kubernetes mechanisms that ensure a certain number of Pods are always running, but they are not equal. One is legacy, one is modern.
+
+ReplicationController → old, deprecated, almost nobody uses it today.
+
+ReplicaSet → new, more powerful, supports label selectors, used internally by Deployments.
+
+
+The real-world rule
+You never create ReplicaSets manually.
+You always use a Deployment, which manages ReplicaSets for you.
+
+Example:kubectl create deployment redis --image=redis
+
+Why it matters
+Deployments use ReplicaSets internally.
+
+Supports rolling updates (through Deployment).
+
+More flexible and modern.
+
+Example ReplicaSet YAML
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: redis-rs
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis
+
+
+See all ReplicaSets in the cluster:
+kubectl get rs
+
+
+Key fields:
+
+DESIRED → how many Pods you want
+
+CURRENT → how many Pods exist
+
+READY → how many Pods are healthy
+
+If READY = DESIRED, your ReplicaSet is running correctly.
+
+
+Describe a specific ReplicaSet
+
+kubectl describe rs redis-rs
+
+
+Check the Pods created by the ReplicaSet
+
+kubectl get pods -l app=redis
+
+
+Check ReplicaSet status via Deployment (if applicable)
+
+kubectl get deployment
+kubectl describe deployment my-deploy
+
+
+Quick summary of what each does
+Command	Purpose
+kubectl create -f	Creates a ReplicaSet from the YAML file.
+kubectl get replicaset	Lists all ReplicaSets in the current namespace.
+kubectl delete replicaset	Deletes a specific ReplicaSet by name.
+kubectl replace -f	Replaces an existing ReplicaSet with the updated YAML definition.
+kubectl scale --replicas=6 -f	Changes the number of replicas to 6 using the YAML file.
+
+
+If you want to delete the ReplicaSet but keep the Pods
+
+kubectl delete rs myapp-rs --cascade=orphan
+Result:
+ReplicaSet is deleted
+
+Pods remain running
+
+Pods become “orphaned” (no controller manages them)
+
+This is useful for debugging or migration.
+
+
+
+Action	ReplicaSet	Pods	Nodes
+kubectl delete rs myapp-rs	❌ deleted	❌ deleted	✔️ unaffected
+kubectl delete rs myapp-rs --cascade=orphan	❌ deleted	✔️ kept	✔️ unaffected
