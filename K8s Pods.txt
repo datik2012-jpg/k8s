@@ -417,3 +417,310 @@ This is useful for debugging or migration.
 Action	ReplicaSet	Pods	Nodes
 kubectl delete rs myapp-rs	❌ deleted	❌ deleted	✔️ unaffected
 kubectl delete rs myapp-rs --cascade=orphan	❌ deleted	✔️ kept	✔️ unaffected
+
+///////////////////////////////LAB /////////////////
+
+How many PODs exist on the system?
+
+In the current(default) namespace.
+
+
+controlplane ~ ➜  kubectl get pods
+
+
+How many ReplicaSets exist on the system?
+
+In the current(default) namespace.
+
+controlplane ~ ✖ kubectl get replicaset
+No resources found in default namespace.
+
+
+How about now? How many ReplicaSets do you see?
+
+We just made a few changes!
+
+controlplane ~ ✖ kubectl get replicaset
+NAME              DESIRED   CURRENT   READY   AGE
+new-replica-set   4         4         0       12s
+
+
+How many PODs are DESIRED in the new-replica-set? Answer:4 
+
+controlplane ~ ✖ kubectl get replicaset
+NAME              DESIRED   CURRENT   READY   AGE
+new-replica-set   4         4         0       47s
+
+
+What is the image used to create the pods in the new-replica-set?
+
+controlplane ~ ✖ kubectl describe replicaset new-replica-set
+Name:         new-replica-set
+Namespace:    default
+Selector:     name=busybox-pod
+Labels:       <none>
+Annotations:  <none>
+Replicas:     4 current / 4 desired
+Pods Status:  0 Running / 4 Waiting / 0 Succeeded / 0 Failed
+Pod Template:
+
+busybox-container:
+    Image:      busybox777
+
+
+Answer: busybox777
+
+How many PODs are READY in the new-replica-set?
+
+controlplane ~ ✖ kubectl get replicaset
+NAME              DESIRED   CURRENT   READY   AGE
+new-replica-set   4         4         0       2m30s
+
+
+Why do you think the PODs are not ready?
+
+controlplane ~ ✖ kubectl get pods
+NAME                    READY   STATUS             RESTARTS   AGE
+new-replica-set-5fmm4   0/1     ImagePullBackOff   0          4m52s
+new-replica-set-5grxr   0/1     ImagePullBackOff   0          4m52s
+new-replica-set-w8bkx   0/1     ImagePullBackOff   0          4m52s
+new-replica-set-wljq7   0/1     ImagePullBackOff   0          4m52s
+
+controlplane ~ ➜  kubectl describe pod new-replica-set-5fmm4
+
+    State:          Waiting
+      Reason:       ImagePullBackOff
+
+The issue is  ImagePullBackOff - i think due an image busybox777 
+
+Now, delete one of the four PODs directly using kubectl delete command.
+
+controlplane ~ ✖ kubectl delete pod new-replica-set-5fmm4
+pod "new-replica-set-5fmm4" deleted from default namespace
+
+But Replicate set created it again:
+
+controlplane ~ ✖ kubectl get pods
+NAME                    READY   STATUS             RESTARTS   AGE
+new-replica-set-5grxr   0/1     ImagePullBackOff   0          7m41s
+new-replica-set-hnbl9   0/1     ErrImagePull       0          10s
+new-replica-set-w8bkx   0/1     ImagePullBackOff   0          7m41s
+new-replica-set-wljq7   0/1     ImagePullBackOff   0          7m41s
+
+How many PODs exist now?
+
+Answer:4
+
+Why are there still 4 PODs, even after you deleted one?
+
+Answr:Replica insures desire pods keeped
+
+Create a ReplicaSet using the replicaset-definition-1.yaml file located at /root/.
+
+
+There is an issue with the file, so try to fix it.
+
+I have fixed in the version:
+
+controlplane ~ ➜  cat replicaset-definition-1.yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: replicaset-1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+
+controlplane ~ ✖ kubectl create -f replicaset-definition-1.yaml
+replicaset.apps/replicaset-1 created
+
+
+controlplane ~ ✖ kubectl get replicaset
+NAME              DESIRED   CURRENT   READY   AGE
+new-replica-set   4         4         0       17m
+replicaset-1      2         2         2       15s
+
+controlplane ~ ➜  kubectl get pods
+NAME                    READY   STATUS             RESTARTS   AGE
+new-replica-set-5grxr   0/1     ImagePullBackOff   0          17m
+new-replica-set-hnbl9   0/1     ImagePullBackOff   0          9m37s
+new-replica-set-w8bkx   0/1     ImagePullBackOff   0          17m
+new-replica-set-wljq7   0/1     ImagePullBackOff   0          17m
+replicaset-1-ggvxp      1/1     Running            0          23s
+replicaset-1-p5wxj      1/1     Running            0          23s
+
+
+Fix the issue in the replicaset-definition-2.yaml file and create a ReplicaSet using it.
+
+
+This file is located at /root/.
+
+fixed (there - image had wrong spaces):
+
+controlplane ~ ➜  cat replicaset-definition-2.yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: replicaset-2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      tier: nginx
+  template:
+    metadata:
+      labels:
+        tier: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+
+controlplane ~ ➜  kubectl create -f replicaset-definition-2.yaml
+replicaset.apps/replicaset-2 created
+
+controlplane ~ ✖ kubectl get replicaset
+NAME              DESIRED   CURRENT   READY   AGE
+new-replica-set   4         4         0       20m
+replicaset-1      2         2         2       3m53s
+replicaset-2      2         2         2       60s
+
+controlplane ~ ✖ kubectl get pods
+NAME                    READY   STATUS             RESTARTS   AGE
+new-replica-set-5grxr   0/1     ImagePullBackOff   0          20m
+new-replica-set-hnbl9   0/1     ImagePullBackOff   0          13m
+new-replica-set-w8bkx   0/1     ImagePullBackOff   0          20m
+new-replica-set-wljq7   0/1     ImagePullBackOff   0          20m
+replicaset-1-ggvxp      1/1     Running            0          4m4s
+replicaset-1-p5wxj      1/1     Running            0          4m4s
+replicaset-2-4qct4      1/1     Running            0          71s
+replicaset-2-tn6pf      1/1     Running            0          71s
+
+
+Delete the two newly created ReplicaSets - replicaset-1 and replicaset-2
+
+controlplane ~ ✖ kubectl delete replicaset replicaset-1
+replicaset.apps "replicaset-1" deleted from default namespace
+
+controlplane ~ ➜  kubectl delete replicaset replicaset-2
+replicaset.apps "replicaset-2" deleted from default namespace
+
+controlplane ~ ➜  kubectl get replicaset
+NAME              DESIRED   CURRENT   READY   AGE
+new-replica-set   4         4         0       21m
+
+
+Fix the original replica set new-replica-set to use the correct image with name as busybox.
+
+
+Either delete and recreate the ReplicaSet or update the existing ReplicaSet and then delete all PODs, so new ones with the correct image will be created.
+
+If you opt to delete the ReplicaSet and recreate it, please refer to the file named new-replica-set.yaml, which is saved in the /root/ directory for your convenience and fix it.
+
+controlplane ~ ✖ kubectl get replicaset
+NAME              DESIRED   CURRENT   READY   AGE
+new-replica-set   4         4         0       22m
+
+fixed in the yaml:
+
+controlplane ~ ➜  cat new-replica-set.yaml 
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  creationTimestamp: "2026-06-17T19:18:09Z"
+  generation: 1
+  name: new-replica-set
+  namespace: default
+  resourceVersion: "1623"
+  uid: 93483cea-b815-4e59-8045-915b4e98ccc4
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      name: busybox-pod
+  template:
+    metadata:
+      labels:
+        name: busybox-pod
+    spec:
+      containers:
+      - command:
+        - sh
+        - -c
+        - echo Hello Kubernetes! && sleep 3600
+        image: busybox
+        imagePullPolicy: Always
+        name: busybox-container
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  fullyLabeledReplicas: 4
+  observedGeneration: 1
+  replicas: 4
+  terminatingReplicas: 0
+
+Replace the ReplicaSet:
+
+controlplane ~ ✖ kubectl replace -f new-replica-set.yaml 
+replicaset.apps/new-replica-set replaced
+
+Not helped, trying option 2:
+
+Option 2 — Delete and recreate
+
+controlplane ~ ✖ kubectl delete replicaset new-replica-set
+replicaset.apps "new-replica-set" deleted from default namespace
+
+controlplane ~ ✖ kubectl apply -f new-replica-set.yaml 
+replicaset.apps/new-replica-set created
+
+Worked fine!!
+
+Scale the ReplicaSet to 5 PODs.
+
+
+Use kubectl scale command or edit the replicaset using kubectl edit replicaset.
+
+controlplane ~ ✖ kubectl edit replicaset new-replica-set 
+replicaset.apps/new-replica-set edited
+
+controlplane ~ ✖ kubectl get pods
+NAME                    READY   STATUS    RESTARTS   AGE
+new-replica-set-48w88   1/1     Running   0          81s
+new-replica-set-chjjl   1/1     Running   0          81s
+new-replica-set-jgxs2   1/1     Running   0          81s
+new-replica-set-sjq57   1/1     Running   0          81s
+new-replica-set-vnjsx   1/1     Running   0          16s
+
+Now scale the ReplicaSet down to 2 PODs.
+
+One option is modify the file in the api: 
+
+Use the kubectl scale command or edit the replicaset using kubectl edit replicaset.
+
+spec:
+  replicas: 2
+  selector:
+
+Second option is: Use the kubectl scale command or edit the replicaset using kubectl edit replicaset.
+
+kubectl scale replicaset myapp-rs --replicas=2
+
+
+
