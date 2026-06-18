@@ -299,3 +299,293 @@ none	Default — actually performs the operation.
 
 kubectl create deployment httpd-frontend --image=httpd:2.4-alpine --replicas=3
 
+
+//////////////////////////Deployments - Update and Rolingback /////////
+
+# Check rollout progress of a Deployment
+kubectl rollout status deployment/myapp-deployment
+# Output:
+# Waiting for rollout to finish: 0 of 10 updated replicas are available...
+# Waiting for rollout to finish: 1 of 10 updated replicas are available...
+# Waiting for rollout to finish: 2 of 10 updated replicas are available...
+# Waiting for rollout to finish: 3 of 10 updated replicas are available...
+# Waiting for rollout to finish: 4 of 10 updated replicas are available...
+# Waiting for rollout to finish: 5 of 10 updated replicas are available...
+# Waiting for rollout to finish: 6 of 10 updated replicas are available...
+# Waiting for rollout to finish: 7 of 10 updated replicas are available...
+# Waiting for rollout to finish: 8 of 10 updated replicas are available...
+# Waiting for rollout to finish: 9 of 10 updated replicas are available...
+# deployment "myapp-deployment" successfully rolled out
+
+# View rollout history of a Deployment
+kubectl rollout history deployment/myapp-deployment
+# Output:
+# deployments "myapp-deployment"
+# REVISION  CHANGE-CAUSE
+# 1         <none>
+# 2         kubectl apply --filename=deployment-definition.yml --record=true
+
+
+Deployment strategy:
+
+
+Recreate - when kill all existing containers and then deploy new version . So downtime is existing until new containers are beeing up.
+
+Rolling Update - when we destroy first container and instead start new container , then we destroy second container andup new version of second container. Default deployment strategy.
+
+
+
+We can modify our deployment.yaml with new version of IMAGE in the file and run "apply":
+
+> kubectl apply -f deployment.yaml
+
+Step-by-step behavior: 
+
+Kubernetes detects a change
+It compares the new YAML with the existing Deployment.
+If the Pod template (like the container image) changed, Kubernetes knows it must update the Pods.
+
+
+A new ReplicaSet is created
+Your Deployment automatically creates a new ReplicaSet with the updated image.
+The old ReplicaSet still exists — it’s kept temporarily for rollback.
+
+Rolling update begins
+Kubernetes starts replacing Pods gradually:
+
+Spins up new Pods with the new image.
+
+Waits for them to become Ready.
+
+Terminates old Pods one by one.
+
+This ensures zero downtime if your readiness probes are configured correctly.
+
+You can watch it live:
+
+kubectl rollout status deployment/<deployment-name>
+
+Old ReplicaSet remains for rollback
+After the rollout finishes, the old ReplicaSet stays in the background.
+You can see it with:
+
+kubectl get replicaset
+
+And rollback if needed:
+
+kubectl rollout undo deployment/<deployment-name>
+
+Kubernetes records the change:
+
+kubectl rollout history deployment/<deployment-name>
+
+
+Action	Result
+kubectl apply -f deployment.yaml	Updates Deployment spec
+Pod template changed (e.g., new image)	Creates new ReplicaSet
+Rolling update	Gradually replaces old Pods
+Old ReplicaSet	Retained for rollback
+Rollout history	Revision number increases
+
+
+How long does the old ReplicaSet stay alive?
+Forever — until YOU delete it.
+
+Kubernetes never automatically deletes old ReplicaSets created by a Deployment.
+They remain in the cluster as long as the Deployment exists, because they are needed for:
+
+rollbacks
+
+rollout history
+
+tracking previous revisions
+
+BUT if we run like this: kubectl set image deployment/myapp-deployment nginx=nginx:1.9.1
+
+It will do the same BUT the yaml file will still have the old image version !!!!
+
+Immediate effect
+Kubernetes updates the Deployment object directly in the cluster.
+
+It modifies the Pod template inside the Deployment to use nginx:1.9.1.
+
+A new ReplicaSet is created, and a rolling update begins automatically.
+
+The change is stored in the cluster, not in your local YAML file.
+
+
+When we do Rolling Update - cause previous replica set still be up (until we delete it) if needed we can do ROLL BACK:
+
+kubectl rollout undo deployment/myapp-deployment
+
+
+The truth: Rollback uses the previous ReplicaSet, not your YAML
+A Deployment keeps a history of ReplicaSets, each representing a version of your Pod template.
+
+When you run rollback:
+
+Kubernetes finds the previous ReplicaSet (the one before your last update)
+
+Scales it up to the desired number of replicas
+
+Scales the current ReplicaSet down to 0
+
+Marks the rollback as a new revision in history
+
+Your YAML file is not involved in this process.
+
+
+
+Commands – Summary
+🟦 Create
+bash
+kubectl create -f deployment-definition.yml
+🟦 Get
+bash
+kubectl get deployments
+🟦 Update
+bash
+kubectl apply -f deployment-definition.yml
+kubectl set image deployment/myapp-deployment nginx=nginx:1.9.1
+🟦 Status
+bash
+kubectl rollout status deployment/myapp-deployment
+kubectl rollout history deployment/myapp-deployment
+🟦 Rollback
+bash
+kubectl rollout undo deployment/myapp-deployment
+🧠 Quick explanation
+Category	Purpose
+Create	Deploy resources from a YAML file
+Get	View existing Deployments
+Update	Apply changes or update container images
+Status	Monitor rollout progress and view history
+Rollback	Revert to the previous ReplicaSet version
+
+///////////////////////////LAB ////////////////
+
+We have deployed a simple web application. Please inspect the Pods and Services within the default namespace.
+
+
+Note: Please wait for the application to complete its deployment. Once the deployment is finished, access the application by clicking on the link labeled Webapp Portal located above your terminal.
+
+
+controlplane ~ ➜  kubectl get pods -A
+NAMESPACE     NAME                                      READY   STATUS      RESTARTS   AGE
+default       frontend-59dfbc6688-h9sn4                 1/1     Running     0          5m30s
+default       frontend-59dfbc6688-hpknp                 1/1     Running     0          5m30s
+default       frontend-59dfbc6688-krh2d                 1/1     Running     0          5m30s
+default       frontend-59dfbc6688-ln7jb                 1/1     Running     0          5m30s
+kube-public   curl                                      1/1     Running     0          5m42s
+kube-system   coredns-6b4688786f-b5rcd                  1/1     Running     0          11m
+kube-system   helm-install-traefik-crd-dtht6            0/1     Completed   0          11m
+kube-system   helm-install-traefik-kctct                0/1     Completed   2          11m
+kube-system   local-path-provisioner-6bc6568469-l7496   1/1     Running     0          11m
+kube-system   metrics-server-77dbbf84b-nwdh5            1/1     Running     0          11m
+kube-system   svclb-traefik-04d38314-dhg9r              2/2     Running     0          10m
+kube-system   traefik-5fdc878c8d-qm8sw                  1/1     Running     0          10m
+
+Check the url: https://30080-port-mddzmez7afhhohhd.labs.kodekloud.com/
+
+
+Execute the script named curl-test.sh to send multiple requests for testing the web application. Please make a note of the output produced.
+
+Execute the script at /root/curl-test.sh.
+
+Inspect the deployment in the default namespace to identify the number of Pods that have been deployed by it.
+
+controlplane ~ ➜  kubectl get pods -A
+NAMESPACE     NAME                                      READY   STATUS      RESTARTS   AGE
+default       frontend-59dfbc6688-h9sn4                 1/1     Running     0          8m12s
+default       frontend-59dfbc6688-hpknp                 1/1     Running     0          8m12s
+default       frontend-59dfbc6688-krh2d                 1/1     Running     0          8m12s
+default       frontend-59dfbc6688-ln7jb                 1/1     Running     0          8m12s
+kube-public   curl                                      1/1     Running     0          8m24s
+kube-system   coredns-6b4688786f-b5rcd                  1/1     Running     0          13m
+kube-system   helm-install-traefik-crd-dtht6            0/1     Completed   0          13m
+kube-system   helm-install-traefik-kctct                0/1     Completed   2          13m
+kube-system   local-path-provisioner-6bc6568469-l7496   1/1     Running     0          13m
+kube-system   metrics-server-77dbbf84b-nwdh5            1/1     Running     0          13m
+kube-system   svclb-traefik-04d38314-dhg9r              2/2     Running     0          13m
+kube-system   traefik-5fdc878c8d-qm8sw                  1/1     Running     0          13m
+
+What container image is used to deploy the applications?
+Just pick up on of the pods and chech:
+controlplane ~ ✖ kubectl describe pod frontend-59dfbc6688
+
+Image:          kodekloud/webapp-color:v1
+
+Inspect the deployment to determine the current strategy in use.
+
+controlplane ~ ✖ kubectl get deployments -A
+NAMESPACE     NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+default       frontend                 4/4     4            4           10m
+kube-system   coredns                  1/1     1            1           16m
+kube-system   local-path-provisioner   1/1     1            1           16m
+kube-system   metrics-server           1/1     1            1           16m
+kube-system   traefik                  1/1     1            1           15m
+
+will look the deployment with name "frontend":
+
+controlplane ~ ✖ kubectl describe deployment frontend
+
+StrategyType:           RollingUpdate
+
+
+What would occur if you were to upgrade the application at this moment?
+
+PODs will be updated few at time
+
+
+
+Let us try that. Upgrade the application by updating the image in the deployment to kodekloud/webapp-color:v2.
+
+
+Please ensure that you do not delete and recreate the deployment. Instead, update the existing deployment by setting the new image name.
+Where is "frontend" is the name of deployment  and simple-webapp is the name of container  - checked here: controlplane ~ ✖ kubectl get deployment frontend -o yaml
+
+controlplane ~ ➜  kubectl set image deployment/frontend simple-webapp=kodekloud/webapp-color:v2
+deployment.apps/frontend image updated
+
+Please execute the script curl-test.sh once more. Observe that the requests now target both the older and newer versions (if checked immediately). Importantly, none of the requests should fail.
+
+Execute the script located at /root/curl-test.sh using the following command:
+
+
+Delete and re-create the deployment if necessary. Only update the strategy type for the existing deployment.
+kubectl edit deployment frontend
+
+and change there to:
+
+strategy:
+  type: Recreate
+
+
+kubectl edit deployment frontend
+
+
+
+Upgrade the application by configuring the deployment to use the image kodekloud/webapp-color:v3.
+
+
+Do not delete and re-create the deployment. Only set the new image name for the existing deployment.
+
+kubectl set image deployment/frontend simple-webapp=kodekloud/webapp-color:v2
+
+
+That’s it.
+This updates the image in the existing Deployment, without deleting it, without touching the strategy, without recreating anything manually.
+
+Needed to modify in the  file cause this worked but test didn't pass:kubectl set image deployment/frontend simple-webapp=kodekloud/webapp-color:v2  - wich made the change in the object ,now in file  :
+controlplane ~ ➜  kubectl edit deployment frontend
+deployment.apps/frontend edited
+
+Run the script curl-test.sh once more and observe the failures. Please wait for the new application to become fully operational. You should notice that the requests no longer reach both versions.
+
+Execute the script located at /root/curl-test.sh using the following command:
+
+changed to RED !!
+
+
+
+
