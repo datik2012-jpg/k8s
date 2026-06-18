@@ -272,3 +272,30 @@ spec:
 
 controlplane ~ ➜  kubectl create -f my-deployment-definition-1.yaml 
 deployment.apps/httpd-frontend created
+
+
+Another option is inline , so for this first run help:
+>kubectl create deployment --help  - and see there the options
+
+
+then Test your YAML or command with dry-run, This checks if your command syntax and resource definition are valid — but doesn’t create anything:
+kubectl create deployment httpd-frontend --image=httpd:2.4-alpine --replicas=3 --dry-run=client
+
+or Generate YAML without applying:
+kubectl create deployment httpd-frontend --image=httpd:2.4-alpine --replicas=3 --dry-run=client -o yaml
+
+Validate yaml filesL
+kubectl apply -f deployment.yaml --dry-run=client
+
+ypes of dry-run modes
+Mode	Description
+client	Validates locally without contacting the API server.
+server	Sends to the API server for validation but doesn’t persist changes.
+none	Default — actually performs the operation.
+
+>kubectl apply -f deployment.yaml --dry-run=server
+
+
+
+kubectl create deployment httpd-frontend --image=httpd:2.4-alpine --replicas=3
+
