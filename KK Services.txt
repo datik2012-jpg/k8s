@@ -1,0 +1,30 @@
+/////////////////////////Services in k8s ///////////
+
+Node -> Service -> Pod
+
+
+NodePort is only required when traffic comes from outside the cluster.
+
+NodePort - in range 30000-32767 
+
+Examples:
+
+You want to open your app in a browser on your laptop
+
+You want to curl the service from outside Kubernetes
+
+You want to expose a web app to the public
+
+
+Service definition yaml:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  type: NodePort         - but can be Clusterip or Loadbalancer or NodePort
+  ports:
+   - targetPort: 80
+     port: 80
+     nodePort: 30008
