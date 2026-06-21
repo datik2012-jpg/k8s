@@ -2,6 +2,8 @@
 
 Node -> Service -> Pod
 
+NodePort - when we want our app in the Pod be accessible outside the node , so we need configure Service which can map port on the Pod ,then we can curl with NOde ip + this port and service will send the trafict to the Pod.
+Services is using LABELS of the Pod.In case we have in the NOde multiple Pods with the same label like "myapp".Uses Algorith:Random and SessionAffinity:Yes.No need to do something.
 
 NodePort is only required when traffic comes from outside the cluster.
 
@@ -28,3 +30,577 @@ spec:
    - targetPort: 80
      port: 80
      nodePort: 30008
+
+
+SO we have deployment wich manages 6 pods: kubectl get deployment   - READY 6/6
+See all pods : kubectl get pods : we can see 6 pods with the myapp-deployment     - all 6 are running
+
+Now we want to create a service which can expose and get URL access to these 6 pods:
+
+service.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+  
+spec:
+  type: NodePort
+  selector:
+    app: my-webb             - binding service here the should be used the label from my Pods
+  - ports:
+    targetPort: 80
+    port:80
+    nodePort: 30001
+  
+Run: kubectl create -f service.yaml
+
+
+Validate: kubectl get service
+
+In minikube we can run next command : minikube service my-service --url  - where "my-service" is the name of my service and it will show exaclty the url for access the pods with configuration we did:
+Output: http://192.168.2.101:30001    - use it in browser and check if the service is avilable
+
+
+////////////////////////////K8s Service  ClusterIP ////////////////
+
+
+A ClusterIP Service is the default and most common Service type in Kubernetes. It provides a stable, internal-only virtual IP that other Pods inside the cluster can use to reach your application. It is the foundation of Pod‑to‑Pod communication and internal load balancing.
+What ClusterIP actually is (core definition)
+A ClusterIP Service exposes your application on a virtual IP address that is reachable only inside the cluster.
+Traffic sent to this IP is load‑balanced across all Pods that match the Service’s selector.
+
+if we have server and db  pods we will create separate clusterip yamls for them cause server pods have one label name like "server-app" and dp pods have "db-server" label , so they can not be part of one clusterip.
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-svc
+spec:
+  selector:
+    app: server
+  ports:
+    - port: 5000
+      targetPort: 5000
+
+
+for DB:
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-svc
+spec:
+  selector:
+    app: db
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+need to run later: kubectl create -f server-service.yaml
+and kubectl create -f db-server.yaml 
+
+///////////////////////////K8s Service LoadBalancer //////////
+
+When we have in our votig app - two clients  - one for vote and second for results.So we want the vote client be accessible by one url name and results page by second url name - we need to use LOADBALANCER 
+
+
+
+//////////////////////////Lab Services /////////
+
+How many Services exist on the system?
+
+In the current(default) namespace
+
+controlplane ~ ➜  kubectl get services -A
+NAMESPACE     NAME             TYPE           CLUSTER-IP      EXTERNAL-IP       PORT(S)                      AGE
+default       kubernetes       ClusterIP      10.43.0.1       <none>            443/TCP                      19m
+kube-system   kube-dns         ClusterIP      10.43.0.10      <none>            53/UDP,53/TCP,9153/TCP       19m
+kube-system   metrics-server   ClusterIP      10.43.194.185   <none>            443/TCP                      19m
+kube-system   traefik          LoadBalancer   10.43.246.100   192.168.175.153   80:32610/TCP,443:32262/TCP   19m
+
+controlplane ~ ➜  kubectl get services
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   10.43.0.1    <none>        443/TCP   19m
+
+
+What is the type of the default kubernetes service?
+
+Answer: ClusterIp - is a default service in k8s
+
+What is the targetPort configured on the kubernetes service?
+
+controlplane ~ ✖ kubectl get services    - to check the name:
+
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   10.43.0.1    <none>        443/TCP   21m
+
+
+controlplane ~ ✖ kubectl describe service kubernetes
+Name:                     kubernetes
+Namespace:                default
+Labels:                   component=apiserver
+                          provider=kubernetes
+Annotations:              <none>
+Selector:                 <none>
+Type:                     ClusterIP
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.43.0.1
+IPs:                      10.43.0.1
+Port:                     https  443/TCP
+TargetPort:               6443/TCP
+Endpoints:                192.168.175.153:6443
+Session Affinity:         None
+Internal Traffic Policy:  Cluster
+Events:                   <none>
+
+Answer: TargetPort:               6443/TCP
+
+How many labels are configured on the kubernetes service?
+
+
+controlplane ~ ✖ kubectl describe service kubernetes
+Name:                     kubernetes
+Namespace:                default
+Labels:                   component=apiserver
+                          provider=kubernetes
+
+Answer: 2
+
+
+How many Endpoints are attached on the kubernetes service?
+
+controlplane ~ ✖ kubectl describe service kubernetes
+Name:                     kubernetes
+Namespace:                default
+Labels:                   component=apiserver
+                          provider=kubernetes
+Annotations:              <none>
+Selector:                 <none>
+Type:                     ClusterIP
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.43.0.1
+IPs:                      10.43.0.1
+Port:                     https  443/TCP
+TargetPort:               6443/TCP
+Endpoints:                192.168.175.153:6443
+
+Answer:1
+
+
+
+How many Deployments exist on the system now?
+
+In the current(default) namespace
+
+controlplane ~ ✖ kubectl get deployments
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+simple-webapp-deployment   4/4     4            4           17s
+
+Answer: 1  - is simple-webapp-deployment only
+
+
+What is the image used to create the pods in the deployment?
+
+
+controlplane ~ ✖ kubectl get pods
+NAME                                        READY   STATUS    RESTARTS   AGE
+simple-webapp-deployment-6dcd5bb6b6-bl4jt   1/1     Running   0          75s
+simple-webapp-deployment-6dcd5bb6b6-gcpmd   1/1     Running   0          75s
+simple-webapp-deployment-6dcd5bb6b6-rnjd6   1/1     Running   0          75s
+simple-webapp-deployment-6dcd5bb6b6-xccd5   1/1     Running   0          75s
+
+
+controlplane ~ ➜  kubectl describe pod simple-webapp-deployment-6dcd5bb6b6-bl4jt
+Name:             simple-webapp-deployment-6dcd5bb6b6-bl4jt
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             controlplane/192.168.175.153
+Start Time:       Sun, 21 Jun 2026 08:43:33 +0000
+Labels:           name=simple-webapp
+                  pod-template-hash=6dcd5bb6b6
+Annotations:      <none>
+Status:           Running
+IP:               10.22.0.12
+
+ontainers:
+  simple-webapp:
+    Container ID:   containerd://8fe975998a6b95f662e0deda0e799a7e92cf430d7b2439b96de671b7a8a229a0
+    Image:          kodekloud/simple-webapp:red
+    Image ID:       docker.io/kodekloud/simple-webapp@sha256:175ba08b8986076df14c40db45c4cc1fbbb16ffff031a646d6bc98f20fb5d902
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sun, 21 Jun 2026 08:43:37 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-8l7d4 (ro)
+
+Answer: kodekloud/simple-webapp:red
+
+Can you currently access the Web App UI through the tab?
+
+Try to access the Web Application UI using the tab simple-webapp-ui above the terminal.
+
+Created yaml file for a service NodePort:
+
+
+controlplane ~ ➜  cat service-definition-1.yaml 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service 
+  namespace: default
+spec:
+  type: NodePort
+  ports:
+  - nodePort: 30080
+    port: 8080
+    targetPort: 8080 
+  selector:
+    name: simple-webapp 
+
+Dry run validating without creating anything:
+
+controlplane ~ ✖ kubectl apply -f service-definition-1.yaml --dry-run=client 
+service/webapp-service created (dry run)
+
+If we want to see generated object:
+
+kubectl apply -f service-definition-1.yaml --dry-run=client -o yaml
+
+
+controlplane ~ ✖ kubectl apply -f service-definition-1.yaml --dry-run=client -o yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"webapp-service","namespace":"default"},"spec":{"ports":[{"nodePort":30080,"port":8080,"targetPort":8080}],"selector":{"name":"simple-webapp"},"type":"NodePort"}}
+  name: webapp-service
+  namespace: default
+spec:
+  ports:
+  - nodePort: 30080
+    port: 8080
+    targetPort: 8080
+  selector:
+    name: simple-webapp
+  type: NodePort
+
+Apply for real (create/update the Service):
+
+kubectl apply -f service-definition-1.yaml
+
+To validate the service is running:
+
+controlplane ~ ➜  kubectl get svc -A
+NAMESPACE     NAME             TYPE           CLUSTER-IP      EXTERNAL-IP       PORT(S)                      AGE
+default       kubernetes       ClusterIP      10.43.0.1       <none>            443/TCP                      37m
+default       webapp-service   NodePort       10.43.131.64    <none>            8080:30080/TCP               31s
+kube-system   kube-dns         ClusterIP      10.43.0.10      <none>            53/UDP,53/TCP,9153/TCP       37m
+kube-system   metrics-server   ClusterIP      10.43.194.185   <none>            443/TCP                      37m
+kube-system   traefik          LoadBalancer   10.43.246.100   192.168.175.153   80:32610/TCP,443:32262/TCP   37m
+
+
+And no we can open an url: https://30080-port-mu2np3lks6u3gd2p.labs.kodekloud.com/
+
+
+////////////////Microservices Architecture ////////////
+
+we will continue with voting app.
+
+First we need create a voting web app yaml , for web page which is has votes YES or NO :
+voting-app-pod.yaml  
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vote
+  labels:
+    app: vote   
+spec:
+  containers:
+  - name: vote
+    image: docker/examplevotingapp_vote
+    ports:
+    - containerPort: 80
+      name: vote
+
+
+Now result web app:
+
+results-app-vote.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: result
+  labels:
+    app: result
+   
+spec:
+  containers:
+  - name: result
+    image: docker/examplevotingsapp_result
+    ports:
+    - containerPort: 80
+      name: result
+
+
+Readis db yaml:
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis
+  labels:
+    app: redis
+   
+spec:
+  containers:
+  - name: redis
+    image: redis:alpine
+    ports:
+    - containerPort: 6379
+      name: redis
+
+
+Now DB yaml:
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db
+  labels:
+    app: db
+   
+spec:
+  containers:
+  - name: postgres
+    image: postgres:15-alpine
+    env:
+      - name: POSTGRES_USER
+        value: postgres
+      - password: POSTGRES_PASSWORD
+        value: postgres
+    ports:
+    - containerPort: 5432
+      name: postgres
+
+
+and last one is WORKER pod:
+
+
+worker-pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: worker
+  labels:
+    app: worker
+   
+spec:
+  containers:
+  - name: worker
+    image: docker/examplevotingsapp_worker
+
+and we do not need port exposed - cause worker do not need it.
+Your intuition is exactly right, Dani — the worker Pod does NOT need any ports exposed, because it is not a server. It only initiates connections (to Redis, DB, API, etc.), so it behaves like a client inside the cluster.
+
+And here’s the key:
+
+In Kubernetes, Pods talk to other Pods using Service DNS names — not ports on nodes, not Pod IPs.
+
+So your worker Pod will talk to the DB using the DB Service name, not the DB Pod IP.
+
+Your worker simply connects to:
+db-svc:5432
+Kubernetes DNS resolves that name to the current DB Pod, no matter which node it runs on.
+
+
+Now we need to create services.
+First service yaml is redis service yaml:
+redis-service.yaml
+
+
+apiVersion: app/v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    app: redis
+   
+spec:
+  type: ClusterIP
+  ports:
+  - name: "redis-service"
+    port: 6379
+    tagretPort: 6379
+  selector:                  - says to pass request to any app with name "redis" 
+    app: redis  
+
+now create yaml for DB service:
+
+
+
+apiVersion: app/v1
+kind: Service
+metadata:
+  name: db
+  labels:
+    app: db
+   
+spec:
+  type: ClusterIP
+  ports:
+  - name: "db-service"
+    port: 5432
+    tagretPort: 5432
+  selector:                  - says to pass request to any app with name "redis" .For selector alway look the yaml where it defined - so the name should be coming from there
+    app: db        
+
+
+now we need VOTE app service which will provide the option to access the VOTE from outside  - so should be an NodePort:
+
+
+apiVersion: app/v1
+kind: Service
+metadata:
+  name: vote
+  labels:
+    app: vote
+   
+spec:
+  type: NodePort
+  ports:
+  - name: "vote-service"
+    port: 8080
+    tagretPort: 80
+    nodePort: 31000         - user outside will be sending url request to this port in the node
+  selector:                  - says to pass request to any app with name "vote" 
+    app: vote 
+
+
+now we need the same (NodePort) for results pod:
+
+
+apiVersion: app/v1
+kind: Service
+metadata:
+  name: result
+  labels:
+    app: result
+   
+spec:
+  type: NodePort
+  ports:
+  - name: "result-service"
+    port: 8080
+    tagretPort: 80
+    nodePort: 31001         - user outside will be sending url request to this port in the node
+  selector:                  - says to pass request to any app with name "vote" 
+    app: result    
+
+
+To deploy all the files together: kubectl apply -f .  
+
+(or one by one by kubectl apply -f db-pod.yaml    - use yaml names)
+
+Validate pod: kubectl get pods
+              kubectl get services 
+
+kubectl get node -o wide  - to get the node ip address of cluster control plane - which we can use to url vote and results
+
+the case if something is failing no service which will do monitoring or recovery......so we need to use DEPLOYMENT - which can redeploy the pod in case of failure and monitoring it
+
+>kubectl delete -f .            - will delete/destroy all deployed pods
+
+So we need to create DEPLOYEMENT : 
+Url to all the files: https://github.com/kodekloudhub/example-voting-app/tree/master/k8s-specifications
+
+
+vote-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+  labels:
+    app: vote
+spec:
+  replicas: 1
+  selector: - which says to deployment to watch any app with vote and only one should be existing !!
+    app: vote 
+  template:    - from this line and down , just go to vote-pod and copy all metadata to here.And the we add replicas , how many instances do we want for this pod
+    metadata:
+      name: vote
+      labels:
+        app: vote   
+    spec:
+      containers:
+      - name: vote
+        image: docker/examplevotingapp_vote
+        ports:
+          - containerPort: 80
+            name: vote
+
+
+create result deployment similar to this way :
+result-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: result
+  labels:
+    app: result
+spec:
+  replicas: 1
+  selector: - which says to deployment to watch any app with vote and only one should be existing !!
+    app: result 
+  template:    - from this line and down , just go to vote-pod and copy all metadata to here.And the we add replicas , how many instances do we want for this pod
+    metadata:
+      name: result
+      labels:
+        app: result   
+    spec:
+      containers:
+      - name: result
+        image: docker/examplevotingapp_result
+        ports:
+          - containerPort: 80
+            name: result
+
+
+now create redis deployment  for db as well and worker !!
+
+When all deployments yamls ready run:
+kubectl apply -f . 
+
+kubectl get deployments   - we can see deployments
+kubectl get replicaset  - to see replicasets
+>kubectl get node -o wide  - to see the ip address of the cluster to access
+
+
+How to scale ?
+
+we want vote deployment 5 instances:
+>kubectl scale deployment vote --replicase=5
+
+Validate: kubectl get deployments - you now can see vote  5/5  are readu after few minutes .Which is meaning we now have 5 pods!!
+
+Url to all the files: https://github.com/kodekloudhub/example-voting-app/tree/master/k8s-specifications
+
+
+
