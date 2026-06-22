@@ -1,0 +1,98 @@
+//////////////////////K8s Google cloud /////////
+
+Login to Google Cloud - Jubernetes Engine / Clusters and you can try Get Started with GKE - there 6-7 lessons how to deploy an app
+
+//////////////////////////K8s on the AWS -EKS ////////////////
+
+Steps: 
+
+Prerequisites for AWS EKS Deployment
+AWS Account  
+Create a free AWS account at aws.amazon.com/free.
+
+Install Kubectl CLI  
+The Kubernetes command-line tool used to manage clusters.
+
+Install AWS CLI  
+Required to interact with AWS services from your terminal.
+
+Create EKS Cluster Role  
+An IAM role that allows EKS to manage AWS resources on your behalf.
+
+Create IAM Role for Node Group  
+Grants permissions for EC2 instances (worker nodes) to connect to the cluster.
+
+Set Up VPC  
+A Virtual Private Cloud where your EKS cluster will run. You can use an existing one or create a new one.
+
+Create EC2 Key Pair  
+Used to SSH into worker nodes for troubleshooting or configuration.
+
+Understand AWS Basics  
+Familiarize yourself with EC2, IAM, VPC, and CloudFormation concepts.
+
+teps to Deploy EKS
+Install eksctl
+
+bash
+brew install eksctl
+or follow the official guide for your OS.
+
+Create a Cluster
+
+bash
+eksctl create cluster --name my-cluster --region us-east-1
+Verify Cluster Connection
+
+bash
+kubectl get nodes
+You should see your worker nodes listed.
+
+Deploy Applications  
+Use Kubernetes manifests (.yaml files) to deploy workloads to your EKS cluster.
+
+//////////////////////////k8s on Azure - AKS ///////////
+
+
+
+Prerequisites
+Azure Account — Sign up for a free account at azure.microsoft.com/free.
+
+Active Subscription — Ensure your account has an active Azure subscription.
+
+Azure Basics — Familiarity with Azure concepts like Resource Groups, Virtual Networks, and IAM roles.
+
+
+Steps to Deploy a Kubernetes Cluster (AKS)
+Install Azure CLI  
+Download and install the Azure Command-Line Interface.
+
+bash
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+Login to Azure
+
+bash
+az login
+Create a Resource Group
+
+bash
+az group create --name myResourceGroup --location eastus
+Create the AKS Cluster
+
+bash
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 2 --enable-addons monitoring --generate-ssh-keys
+Connect to the Cluster
+
+bash
+az aks get-credentials --resource-group myResourceGroup --name myAKSCluster
+Verify Cluster Status
+
+bash
+kubectl get nodes
+Deploy Your Application  
+Apply your Kubernetes manifests:
+
+bash
+kubectl apply -f deployment.yaml
+Monitor and Scale  
+Use Azure Monitor or kubectl scale to adjust resources as needed.

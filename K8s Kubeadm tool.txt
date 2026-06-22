@@ -1,0 +1,376 @@
+Demo - Kubeadm - Configuring Cluster With Kubeadm How to set local k8s env: https://learn.kodekloud.com/user/courses/kubernetes-for-the-absolute-beginners-hands-on-tutorial/module/d62e1702-30be-44bb-87da-49bb2a18e406/lesson/8ba8fd51-ccbd-4055-b39a-4a3e66d33645
+
+Install and set up the kubectl tool: https://kubernetes.io/docs/tasks/tools/
+
+Install Minikube: https://minikube.sigs.k8s.io/docs/start/
+
+Install VirtualBox: https://www.virtualbox.org/wiki/Downloads
+
+https://www.virtualbox.org/wiki/Linux_Downloads
+
+Minikube Tutorial: https://kubernetes.io/docs/tutorials/hello-minikube/
+
+If the minikube installation has been done on the macOS, then to access the URL on the local browser, we need to do a few steps to get the service URL to work. Those steps are covered on this documentation page: https://minikube.sigs.k8s.io/docs/handbook/accessing/#using-minikube-service-with-tunnel
+
+
+Uncover additional insights through the videos listed below:
+
+Kubernetes Update Videos
+
+Kubernetes v1.27 Update
+Kubernetes Update 1.27: Chill Vibes Edition - Exploring the Latest Enhancements
+
+Kubernetes v1.28 Update
+Kubernetes Update 1.28: Planternetes Edition - Exploring the Latest Enhancements
+
+Kubernetes v1.29 Update
+Exploring Kubernetes 1.29 Updates - Mandala Universe
+
+Kubernetes Project Videos
+
+Special Interest Groups (SIGs) in Kubernetes
+Kubernetes SIGs: What They Are and How They Work
+
+Kubernetes Enhancement Proposals (KEPs) Unveiled
+What are Kubernetes Enhancement Proposals (KEPs)?
+
+
+
+
+What is kubeadm?
+kubeadm is a Kubernetes tool that helps you bootstrap a production‑grade Kubernetes cluster.
+It doesn’t install Kubernetes for you — it initializes and configures the control plane and worker nodes.
+
+Think of kubeadm as the installer and cluster builder for Kubernetes.
+
+Why kubeadm is needed
+kubeadm is used because it:
+
+Creates the control plane (API server, scheduler, controller manager)
+
+Generates certificates for secure cluster communication
+
+Bootstraps worker nodes and joins them to the cluster
+
+Configures networking (CNI)
+
+Ensures Kubernetes best practices for cluster layout and security
+
+It’s the official and recommended way to create Kubernetes clusters on bare metal or VMs.
+
+Cloud providers (EKS, AKS, GKE) hide kubeadm from you — but under the hood, they use similar logic.
+
+
+
+Multipass is a lightweight virtual machine manager created by Canonical (the makers of Ubuntu).
+It’s designed to give you instant Ubuntu VMs with a single command — much simpler than Vagrant or VirtualBox.
+
+What Multipass is
+Multipass is a mini‑cloud on your laptop.
+It lets you launch Ubuntu VMs extremely fast, using:
+
+VirtualBox
+
+Hyper‑V
+
+QEMU
+
+macOS Hypervisor
+
+It’s like having a tiny AWS EC2 on your machine.
+
+
+Multipass vs Vagrant (quick comparison)
+Feature	        Multipass	Vagrant
+Speed	           ⭐⭐⭐⭐⭐	⭐⭐⭐
+Complexity	Very simple	More complex
+OS support	Mostly Ubuntu	Many OSes
+Provisioning	Cloud-init	Shell, Ansible, etc.
+Best for	Quick dev VMs	Reproducible environments
+
+
+
+
+
+🚀 Step 1 — Launch 3 VMs with Multipass
+Run these commands on your host machine:
+
+bash
+multipass launch --name master --mem 4G --disk 20G
+multipass launch --name worker1 --mem 4G --disk 20G
+multipass launch --name worker2 --mem 4G --disk 20G
+Check they’re running:
+
+bash
+multipass list
+🛠 Step 2 — Install MicroK8s on all nodes
+Master:
+bash
+multipass shell master
+sudo snap install microk8s --classic
+sudo usermod -aG microk8s ubuntu
+sudo microk8s status --wait-ready
+Workers:
+bash
+multipass shell worker1
+sudo snap install microk8s --classic
+sudo usermod -aG microk8s ubuntu
+sudo microk8s status --wait-ready
+Repeat for worker2.
+
+🔗 Step 3 — Get the join command from the master
+Inside master:
+
+bash
+microk8s add-node
+You’ll get output like:
+
+Code
+microk8s join 192.168.64.2:25000/abcdef1234567890
+Copy that command.
+
+🤝 Step 4 — Join worker nodes to the cluster
+On worker1:
+
+bash
+sudo microk8s join 192.168.64.2:25000/abcdef1234567890
+On worker2:
+
+bash
+sudo microk8s join 192.168.64.2:25000/abcdef1234567890
+🌐 Step 5 — Enable networking & dashboard
+On the master:
+
+bash
+sudo microk8s enable dns storage dashboard
+Optional but recommended:
+
+bash
+sudo microk8s enable ingress
+📦 Step 6 — Use kubectl
+MicroK8s includes its own kubectl:
+
+bash
+microk8s kubectl get nodes
+You should see:
+
+Code
+master     Ready
+worker1    Ready
+worker2    Ready
+
+
+
+Use Minikube if:
+You want the simplest Kubernetes setup
+
+You only need one node
+
+You want built-in addons (dashboard, ingress, metrics-server)
+
+You want to start/stop clusters quickly
+
+minikube start --driver=multipass
+
+
+Use Multipass if:
+You want multi-node Kubernetes
+
+You want MicroK8s or kubeadm
+
+You want to simulate a real cluster
+
+You want multiple VMs for DevOps labs
+
+multipass launch --name master
+multipass launch --name worker1
+multipass launch --name worker2
+
+
+Multipass vs Vagrant — The Real Difference
+Multipass = Fast Ubuntu VM launcher  
+Vagrant = Full environment automation + reproducible VM infrastructure
+
+They overlap, but they solve different problems.
+
+ore Concept Difference
+Multipass
+Creates Ubuntu-only VMs
+
+Extremely fast
+
+Minimal configuration
+
+Cloud‑init support
+
+Great for MicroK8s, quick dev VMs, and lightweight clusters
+
+Vagrant
+Creates VMs using any OS (Ubuntu, Debian, CentOS, Windows)
+
+Uses providers (VirtualBox, VMware, Hyper-V)
+
+Full provisioning (Ansible, Shell, Puppet, Chef)
+
+Perfect for reproducible DevOps labs
+
+Great for kubeadm multi-node clusters
+
+
+
+Speed Comparison
+Task	Multipass	Vagrant
+Launch VM	2–5 seconds	30–90 seconds
+Delete VM	Instant	Slower
+Rebuild environment	Fast	Slower but reproducible
+
+
+Configuration Complexity
+Feature	Multipass	Vagrant
+Config file	Optional	Required
+Provisioning	Cloud-init	Shell, Ansible, Puppet, Chef
+Multi-node clusters	Manual	Easy with loops
+Networking	Simple	Very flexible
+
+When to Use Multipass
+Use Multipass if you want:
+
+Quick Ubuntu VMs
+
+MicroK8s clusters
+
+Lightweight Kubernetes
+
+Fast DevOps testing
+
+Simple cloud-init automation
+
+Minimal setup
+
+multipass launch --name k8s --mem 4G
+
+
+
+When to Use Vagrant
+Use Vagrant if you want:
+
+Multi-node Kubernetes clusters (kubeadm)
+
+Reproducible DevOps labs
+
+Multi‑OS support
+
+Complex provisioning
+
+Infrastructure-as-code for VMs
+
+Team‑shared environments
+
+vagrant up
+Creates 3 VMs, installs Docker, kubeadm, joins nodes — all automated.
+
+Kubernetes Use Case Comparison
+✔ Multipass + MicroK8s
+Easiest
+
+Fastest
+
+Best for learning
+
+Great for 1–3 node clusters
+
+✔ Vagrant + kubeadm
+Most realistic
+
+Best for DevOps practice
+
+Supports 3–10 node clusters
+
+Matches production Kubernetes architecture
+
+/////////////////////////////kubeadm //////////
+
+What kubeadm does in production
+Each item starts with a Guided Link so you can explore it deeper.
+
+- Bootstrap control plane
+Creates API server, scheduler, controller manager.
+
+- Join worker nodes
+Adds nodes to the cluster securely.
+
+- Generate certificates
+Handles TLS for cluster components.
+
+- Upgrade clusters
+Provides safe upgrade commands.
+
+- Install CNI plugins
+Calico, Flannel, Cilium, etc.
+
+What kubeadm does NOT do (you must handle)
+Load balancer for control plane
+
+etcd backup/restore automation
+
+Monitoring (Prometheus/Grafana)
+
+Logging (ELK, Loki)
+
+Ingress (NGINX, Traefik)
+
+Storage (Ceph, Longhorn, NFS)
+
+Node lifecycle automation
+
+This is why kubeadm is powerful but requires expertise.
+
+kubeadm gives you full control, but also full responsibility.
+
+
+When kubeadm is a good production choice
+Use kubeadm in production when you want:
+
+On‑premise Kubernetes
+
+Bare‑metal clusters
+
+Edge clusters
+
+Full customization
+
+No cloud vendor lock‑in
+
+High performance networking (Calico, Cilium)
+
+To learn real cluster internals
+
+This is why many DevOps engineers prefer kubeadm for labs and real deployments.
+
+When kubeadm is not ideal
+Avoid kubeadm if you want:
+
+Automatic upgrades
+
+Built‑in HA
+
+Managed control plane
+
+Easy scaling
+
+Minimal maintenance
+
+In that case, use:
+
+AKS
+
+EKS
+
+GKE
+
+OpenShift
+
+K3s (for edge)
+
+MicroK8s (for simplicity)
+
